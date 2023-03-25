@@ -26,7 +26,14 @@ PANEL = 33*2
 EDGE_PYRAMID = 60
 HEIGHT_PYRAMID = int(EDGE_PYRAMID*TG60/2)
 RADIUS = int(EDGE_PYRAMID/2.1)
-BORDER = 10
+BORDER = 15
+
+EDGEka = int(RADIUS*0.8)
+EDGE_PYRAMIDka = int(EDGE_PYRAMID+2*EDGEka*TG60)
+HEIGHT_PYRAMIDka = HEIGHT_PYRAMID+EDGEka*3
+
+BORDERka = int(RADIUS*1.2)
+BORDERe = int(BORDERka*TG60*2/3)
 
 BACKGROUND_COLOR = "#000000"
 GRAY_COLOR = "#808080"
@@ -39,6 +46,7 @@ GRADIENT_COLOR = [ [(255, 255, 255, 255), (120, 120, 120, 255)], [(000, 000, 255
 
 level = []
 solved_level = []
+filename = ""
 
 BTN_CLICK = False
 BTN_CLICK_STR = ""
@@ -81,14 +89,15 @@ def button_Size_click(y,x):
         BTN_CLICK_STR = "plusy"
     BTN_CLICK = True
 
+def ret_cell(level, y, x):
+    if (0 <= y < SIZE_Y) and (0 <= x < SIZE_X):
+        if level[y][x] == 0:
+            return 0
+        elif level[y][x] < 9:
+            return level[y][x]
+    return -1
+
 def pyram_find_empty(level, y, x):
-    def ret_cell(level, y, x):
-        if (0 <= y < SIZE_Y) and (0 <= x < SIZE_X):
-            if level[y][x] == 0:
-                return 0
-            elif level[y][x] < 9:
-                return level[y][x]
-        return -1
 
     def ret_area(level, pos_mas):
         for pos in pos_mas:
@@ -107,7 +116,7 @@ def pyram_find_empty(level, y, x):
             area = ret_area(level, ((y+1,x),(y+2,x),(y+1,x+1),(y+2,x+1),(y+1,x-1),(y+2,x-1)))
             if (area == 0):
                 pyram_epty.append((y+1, x, 1))
-        if x > 1:
+        if x > 0:
             area = ret_area(level, ((y,x-1),(y,x-2),(y,x-3),(y-1,x-1),(y-1,x-2),(y-1,x-3)))
             if (area == 0):
                 pyram_epty.append((y, x - 1, 2))
@@ -121,7 +130,7 @@ def pyram_find_empty(level, y, x):
             area = ret_area(level, ((y-1,x),(y-2,x),(y-1,x+1),(y-2,x+1),(y-1,x-1),(y-2,x-1)))
             if (area == 0):
                 pyram_epty.append((y-1, x, 1))
-        if x > 1:
+        if x > 0:
             area = ret_area(level, ((y,x-1),(y,x-2),(y,x-3),(y+1,x-1),(y+1,x-2),(y+1,x-3)))
             if (area == 0):
                 pyram_epty.append((y, x - 1, 2))
@@ -154,12 +163,15 @@ def gradient_circle(radius, startcolor, endcolor, cir, inv, offset=(0, 0)):
 
     return bigSurf
 
-def read_file():
-    dir = os.path.abspath(os.curdir)
-    filetypes = (("Text file", "*.txt"),("Any file", "*"))
-    filename = fd.askopenfilename(title="Open Level", initialdir=dir,filetypes=filetypes)
-    if filename=="":
-        return ""
+def read_file(fl):
+    global filename
+
+    if fl or filename=="":
+        dir = os.path.abspath(os.curdir)
+        filetypes = (("Text file", "*.txt"),("Any file", "*"))
+        filename = fd.askopenfilename(title="Open Level", initialdir=dir,filetypes=filetypes)
+        if filename=="":
+            return ""
 
     x = y = 0
     level = []
@@ -167,10 +179,13 @@ def read_file():
         lines = f.readlines()
         for nom,str in enumerate(lines):
             str = str.replace('\n','')
+            str = str.strip()
+            if str == "": break
+
             str_mas = []
             while len(str)>=1:
                 sim = str[0]
-                str = str[2:]
+                str = str[1:]
                 str_mas.append(int(sim))
             level.append(str_mas)
             y += 1
@@ -188,11 +203,40 @@ def save_file(level):
         for string in level:
             line = ""
             for pyr in string:
-                line += str(pyr)+" "
+                line += str(pyr)
             f.write(line+"\n")
 
+def coordinate_calc(ny, nx, SHIFT=0):
+    BORD = BORDER + RADIUS
+    orient = (ny % 2 == 0) == (nx % 2 == 0)  # уголок вверх
+    fl_or = 1 if orient else -1
+    fl_y = 0 if orient else 1
+    # x1,y1 - вершина, x2,yy и x3,yy - основание, x1,y0 - центр
+    if (nx % 2 == 0):  # 1 ряд, наверх или 2 ряд, вниз
+        x1 = ((nx+1)*EDGE_PYRAMID)//2 + BORD
+    else:  # 2 ряд, наверх или 1 ряд, вниз
+        x1 = ((nx+2)//2)*EDGE_PYRAMID + BORD
+
+    y1 = (ny+fl_y) * HEIGHT_PYRAMID + BORD
+    yy = y1 + HEIGHT_PYRAMID * fl_or
+
+    if SHIFT==0:
+        y0 = y1 + int(2 * HEIGHT_PYRAMID / 3) * fl_or
+        x2 = x1 + int(EDGE_PYRAMID / 2) * fl_or
+        x3 = x1 - int(EDGE_PYRAMID / 2) * fl_or
+        return x1, y1, x2, x3, yy, y0
+    else:
+        SHIFTka = int(EDGE_PYRAMID + 2*SHIFT * TG60)
+
+        x1_grid = x1
+        y1_grid = y1 - SHIFT*2 * fl_or
+        yy_grid = yy + SHIFT * fl_or
+        x2_grid = x1 + int(SHIFTka / 2) * fl_or
+        x3_grid = x1 - int(SHIFTka / 2) * fl_or
+        return x1_grid, y1_grid, x2_grid, x3_grid, yy_grid
+
 def main():
-    global SIZE_X,SIZE_Y, BTN_CLICK,BTN_CLICK_STR
+    global SIZE_X,SIZE_Y, BTN_CLICK,BTN_CLICK_STR, filename
 
     # основные константы
     SIZE_X = SIZE_X_START
@@ -216,7 +260,7 @@ def main():
         WIN_HEIGHT = SIZE_Y * HEIGHT_PYRAMID+BORDER*2+RADIUS*2  # Высота
 
         if file_ext:
-            file_ext = False
+            # file_ext = False
             solved_level = []
         else:
             level,solved_level = init_level(SIZE_Y, SIZE_X)
@@ -233,7 +277,7 @@ def main():
 
         # инициализация кнопок
         if True:
-            button_y1 = WIN_HEIGHT + BORDER + 10
+            button_y1 = WIN_HEIGHT + 10 + 10
             button_Reset = Button(screen, 10, button_y1, 45, 20, text='Reset', fontSize=20, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick = lambda: button_Button_click("reset"))
@@ -283,10 +327,20 @@ def main():
                 if BTN_CLICK:
                     fl_break = True
                     if BTN_CLICK_STR=="reset":
-                        fl_break = True
+                        if not file_ext:
+                            fl_break = True
+                            SIZE_X, SIZE_Y = SIZE_X_START, SIZE_Y_START
+                        else:
+                            fl_break = False
+                            fil = read_file(False)
+                            if fil != "":
+                                fl_break = True
+                                level, SIZE_Y, SIZE_X = fil
+                                file_ext = True
                     if BTN_CLICK_STR=="scramble":
                         fl_break = False
-                        scramble_move = SIZE_X * SIZE_Y * 100
+                        scramble_move = SIZE_X * SIZE_Y * 200
+                        pos_pred = (0, 0)
                     if BTN_CLICK_STR=="undo":
                         fl_break = False
                         if len(moves_stack) > 0:
@@ -297,7 +351,7 @@ def main():
                             undo = True
                     if BTN_CLICK_STR=="open":
                         fl_break = False
-                        fil = read_file()
+                        fil = read_file(True)
                         if fil != "":
                             fl_break = True
                             level, SIZE_Y, SIZE_X = fil
@@ -310,8 +364,7 @@ def main():
                     BTN_CLICK_STR = ""
                     if fl_break: break
             else:
-                # обработка рандома для Скрамбла
-                # ищем пирамидку, которую можно повернуть
+                # обработка рандома для Скрамбла - ищем пирамидку, которую можно повернуть
                 pyram_mas = []
                 for ny, row in enumerate(level):
                     for nx, pyramid in enumerate(row):
@@ -320,9 +373,12 @@ def main():
                             if len(pyram_empty) > 0:
                                 pyram_mas.append([ny,nx])
 
-                pos = random.randint(0, len(pyram_mas) - 1)
+                while True:
+                    pos = random.randint(0, len(pyram_mas) - 1)
+                    if pos_pred == (0,0) or pos_pred != pyram_mas[pos]:
+                        break
+                pos_pred = (pyramid_pos_y, pyramid_pos_x)
                 pyramid_pos_y, pyramid_pos_x = pyram_mas[pos]
-                pyramid = level[pyramid_pos_y][pyramid_pos_x]
                 pyram_empty = pyram_find_empty(level, pyramid_pos_y, pyramid_pos_x)
                 len_p = len(pyram_empty)
                 if len_p>0:
@@ -333,55 +389,47 @@ def main():
             # обработка нажатия на пирамидки в игровом поле
 
             if mouse_x+mouse_y > 0:
-                BORD = BORDER + RADIUS
-                if BORD<mouse_y<(WIN_HEIGHT-BORD) and BORD<mouse_x<(WIN_WIDTH-BORD): # мышь внутри игрового поля
-                    yy = (mouse_y-BORD)//HEIGHT_PYRAMID # строка
-                    y2 = (mouse_y-BORD)% HEIGHT_PYRAMID # координаты в строке
+                fl_stop = False
+                for ny, row in enumerate(level):
+                    for nx,pyramid in enumerate(row):
+                        if 0<pyramid<9:
+                            orient = (ny % 2 == 0) == (nx % 2 == 0) # уголок вверх
 
-                    xx = int((mouse_x-BORD)//(EDGE_PYRAMID/2)) # номер прямоугольного блока
-                    x2 = int((mouse_x-BORD)% (EDGE_PYRAMID/2)) # координаты в блоке
+                            ############################################
+                            # расчет всех координат
+                            # x1,y1 - вершина, x2,yy и x3,yy - основание, x1,y0 - центр
+                            x1_grid,y1_grid,x2_grid,x3_grid,yy_grid = coordinate_calc(ny, nx, EDGEka)
 
-                    pyramid_pos_y = yy
+                            x0 = abs(x2_grid-x3_grid)//2
+                            if orient and x3_grid<mouse_x<x2_grid and y1_grid<mouse_y<yy_grid: # в прямоугольнике, вверх
+                                xx,yy = mouse_x-x3_grid, HEIGHT_PYRAMIDka-(mouse_y-y1_grid)
+                            elif not orient and x2_grid<mouse_x<x3_grid and yy_grid<mouse_y<y1_grid: # в прямоугольнике
+                                xx,yy = mouse_x-x2_grid, mouse_y-yy_grid
+                            else: continue
 
-                    try: tg1 = y2/x2
-                    except: tg1 = y2
-                    try: tg11 = (HEIGHT_PYRAMID-y2)/(EDGE_PYRAMID/2-x2)
-                    except: tg11 = y2
+                            xm = EDGE_PYRAMIDka-xx
+                            tg1 = yy if xx==0 else yy/xx
+                            tg2 = yy if xm==0 else yy/xm
 
-                    try: tg2 = y2/(EDGE_PYRAMID/2-x2)
-                    except: tg2 = y2
-                    try: tg22 = (HEIGHT_PYRAMID-y2)/x2
-                    except: tg22 = y2
+                            tg11 = yy if xx==0 else (HEIGHT_PYRAMIDka-yy)/xx
+                            tg22 = yy if xm==0 else (HEIGHT_PYRAMIDka-yy)/xm
 
-                    # разбор прямоугольных блоков шириной в пирамидку
-                    if (yy % 2 == 0) == (xx % 2 == 0):  # 1 ряд, четные с 0 или 2 ряд, нечетные с 1
-                        if tg2>TG60:
-                            pyramid_pos_x = xx
-                        else:
-                            pyramid_pos_x = xx-1
+                            if not ( (xx < x0 and tg1 < TG60) or (xx >= x0 and tg2 < TG60) ):
+                                continue
+                            pyramid_pos_x = nx
+                            pyramid_pos_y = ny
+                            if pyramid_pos_x >= SIZE_X: pyramid_pos_x = -1
 
-                        orient = (pyramid_pos_y % 2 == 0) == (pyramid_pos_x % 2 == 0)  # уголок вверх
-                        if tg2 < TG30 or tg22<TG30:
-                            face = 1
-                        elif orient:
-                            face = 2
-                        else:
-                            face = 3
-                    else: # elif (yy % 2 == 0) and (xx % 2 == 1):  # 1 ряд, нечетные с 1 или 2 ряд, четные с 0
-                        if tg1>TG60:
-                            pyramid_pos_x = xx-1
-                        else:
-                            pyramid_pos_x = xx
+                            if (xx < x0 and tg1 < TG30) or (xx >= x0 and tg2 < TG30):
+                                face = 1
+                            elif (xx < x0):
+                                face = 2
+                            else:
+                                face = 3
 
-                        orient = (pyramid_pos_y % 2 == 0) == (pyramid_pos_x % 2 == 0)  # уголок вверх
-                        if tg1<TG30 or tg11<TG30:
-                            face = 1
-                        elif orient:
-                            face = 3
-                        else:
-                            face = 2
-
-                    if pyramid_pos_x >= SIZE_X : pyramid_pos_x = -1
+                            fl_stop = True
+                            break
+                    if fl_stop: break
 
             ################################################################################
             ################################################################################
@@ -425,7 +473,7 @@ def main():
             pf = Surface((WIN_WIDTH, WIN_HEIGHT))
             pf.fill(Color(GRAY_COLOR))
             screen.blit(pf, (0, 0))
-            pf = Surface((WIN_WIDTH, BORDER))
+            pf = Surface((WIN_WIDTH, 10))
             pf.fill(Color("#B88800"))
             screen.blit(pf, (0, WIN_HEIGHT))
 
@@ -446,57 +494,70 @@ def main():
 
             ############################################
             # отрисовка сетки и пирамидок
-            for fl_empty in range(3):
+            for fl_empty in range(4):
                 for ny, row in enumerate(level):
                     for nx,pyramid in enumerate(row):
                         orient = (ny % 2 == 0) == (nx % 2 == 0) # уголок вверх
 
                         ############################################
                         # расчет всех координат
-                        BORD = BORDER + RADIUS
 
-                        if orient: # уголок вверх
-                            fl_or = 1
-                            if (ny % 2 == 0) and (nx % 2 == 0):  # 1 ряд, наверх
-                                x1 = int(EDGE_PYRAMID / 2) + (nx // 2) * EDGE_PYRAMID + BORD
-                            elif (ny % 2 == 1) and (nx % 2 == 1):  # 2 ряд, наверх
-                                x1 = (nx // 2 + nx % 2) * EDGE_PYRAMID + BORD
-                            y1 = ny * HEIGHT_PYRAMID + BORD
-                            yy_grid = y1 + HEIGHT_PYRAMID
-                        else:  # уголок вниз
-                            fl_or = -1
-                            if (ny % 2 == 0) and (nx % 2 == 1):  # 1 ряд, вниз
-                                x1 = (nx // 2 + nx % 2) * EDGE_PYRAMID + BORD
-                            elif (ny % 2 == 1) and (nx % 2 == 0):  # 2 ряд, вниз
-                                x1 = int(EDGE_PYRAMID / 2) + (nx // 2) * EDGE_PYRAMID + BORD
-                            y1 = (ny+1) * HEIGHT_PYRAMID + BORD
-                            yy_grid = y1 - HEIGHT_PYRAMID
+                        # x1,y1 - вершина, x2,yy и x3,yy - основание, x1,y0 - центр
+                        x1,y1,x2,x3,yy,y0 = coordinate_calc(ny, nx)
+                        x1_grid, y1_grid, x2_grid, x3_grid, yy_grid = coordinate_calc(ny, nx, BORDERka)
 
-                        y1_grid = y1
-                        y0  = y1 + int(2 * HEIGHT_PYRAMID / 3) * fl_or
-                        x2_grid  = x1 + int(EDGE_PYRAMID / 2) * fl_or
-                        x3_grid  = x1 - int(EDGE_PYRAMID / 2) * fl_or
+                        ############################################
+                        # отрисовка границ
+
+                        if fl_empty == 0 and pyramid != 9:
+                            if orient:  # уголок вверх
+                                cell = ret_cell(level, ny, nx-1)
+                                if cell==-1 or cell==9:
+                                    draw.line(screen, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid+BORDERka], [x3_grid+BORDERe//2, yy_grid-BORDERka], 2)
+                                cell = ret_cell(level, ny, nx+1)
+                                if cell == -1 or cell == 9:
+                                    draw.line(screen, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid+BORDERka], [x2_grid-BORDERe//2, yy_grid-BORDERka], 2)
+                                cell = ret_cell(level, ny + 1, nx)
+                                if cell == -1 or cell == 9:
+                                    draw.line(screen, GRAY_COLOR2, [x2_grid-BORDERe, yy_grid],[x3_grid+BORDERe, yy_grid], 2)
+                            else:  # уголок вниз
+                                cell = ret_cell(level, ny, nx-1)
+                                if cell==-1 or cell==9:
+                                    draw.line(screen, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid-BORDERka], [x2_grid+BORDERe//2, yy_grid+BORDERka], 2)
+                                cell = ret_cell(level, ny, nx+1)
+                                if cell == -1 or cell == 9:
+                                    draw.line(screen, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid-BORDERka], [x3_grid-BORDERe//2, yy_grid+BORDERka], 2)
+                                cell = ret_cell(level, ny-1, nx)
+                                if cell==-1 or cell==9:
+                                    draw.line(screen, GRAY_COLOR2, [x2_grid+BORDERe, yy_grid],[x3_grid-BORDERe, yy_grid], 2)
+
+                        # отрисовка точек
+                        # if fl_empty == 0 and pyramid == 9:
+                        #     draw.circle(screen, GRAY_COLOR2, (x1, y1), 3)
+                        #     draw.circle(screen, GRAY_COLOR2, (x2, yy), 3)
+                        #     draw.circle(screen, GRAY_COLOR2, (x3, yy), 3)
 
                         # отрисовка пирамидок и лунок
-
-                        if fl_empty == 0 and pyramid == 9:
-                            draw.circle(screen, GRAY_COLOR2, (x1, y1_grid), 3)
-                            draw.circle(screen, GRAY_COLOR2, (x2_grid, yy_grid), 3)
-                            draw.circle(screen, GRAY_COLOR2, (x3_grid, yy_grid), 3)
-
                         if fl_empty == 1 and pyramid == 0:
                             RAD = int(RADIUS / 1.4)
                             scol, ecol = (160, 160, 160, 255), (120, 120, 120, 255)
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x1-RAD, y1_grid-RAD))
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x2_grid-RAD, yy_grid-RAD))
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x3_grid-RAD, yy_grid-RAD))
+                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x1-RAD, y1-RAD))
+                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x2-RAD, yy-RAD))
+                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x3-RAD, yy-RAD))
 
                         if fl_empty == 2 and pyramid > 0 and pyramid < 9:  # пирамидка
                             scol,ecol = GRADIENT_COLOR[pyramid-1]
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y1_grid-RADIUS))
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x2_grid-RADIUS, yy_grid-RADIUS))
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x3_grid-RADIUS, yy_grid-RADIUS))
+                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y1-RADIUS))
+                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x2-RADIUS, yy-RADIUS))
+                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x3-RADIUS, yy-RADIUS))
                             screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y0-RADIUS))
+
+                        # if fl_empty == 3 and pyramid > 0 and pyramid < 9:  # сетка для отладки
+                        #     x1_grid,y1_grid,x2_grid,x3_grid,yy_grid = coordinate_calc(ny, nx, BORDERka)
+                        #     draw.line(screen, GRAY_COLOR2, [x1_grid, y1_grid], [x2_grid, yy_grid], 2)
+                        #     draw.line(screen, GRAY_COLOR2, [x1_grid, y1_grid], [x3_grid, yy_grid], 2)
+                        #     draw.line(screen, GRAY_COLOR2, [x2_grid, yy_grid], [x3_grid, yy_grid], 2)
+
 
             #####################################################################################
             pygame_widgets.update(events)
