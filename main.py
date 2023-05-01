@@ -248,8 +248,13 @@ def main():
     random.seed()
     pygame.init()  # Инициация PyGame
     font = pygame.font.SysFont('Verdana', 18)
+    font_button = pygame.font.SysFont("ArialB",18)
     timer = pygame.time.Clock()
     Tk().withdraw()
+
+    icon = os.path.abspath(os.curdir) + "\\Rolling Symmetry.ico"
+    if os.path.isfile(icon):
+        pygame.display.set_icon(pygame.image.load(icon))
 
     ################################################################################
     ################################################################################
@@ -278,20 +283,20 @@ def main():
         # инициализация кнопок
         if True:
             button_y1 = WIN_HEIGHT + 10 + 10
-            button_Reset = Button(screen, 10, button_y1, 45, 20, text='Reset', fontSize=20, margin=5, radius=3,
+            button_Reset = Button(screen, 10, button_y1, 45, 20, text='Reset', fontSize=20, font=font_button, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick = lambda: button_Button_click("reset"))
-            button_Scramble = Button(screen, button_Reset.textRect.right+10, button_y1, 70, 20, text='Scramble', fontSize=20, margin=5, radius=3,
+            button_Scramble = Button(screen, button_Reset.textRect.right+10, button_y1, 70, 20, text='Scramble', fontSize=20, font=font_button, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick = lambda: button_Button_click("scramble"))
-            button_Undo = Button(screen, button_Scramble.textRect.right+10, button_y1, 40, 20, text='Undo', fontSize=20, margin=5, radius=3,
+            button_Undo = Button(screen, button_Scramble.textRect.right+10, button_y1, 40, 20, text='Undo', fontSize=20, font=font_button, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick = lambda: button_Button_click("undo"))
 
-            button_Open = Button(screen, button_Undo.textRect.right+20, button_y1, 45, 20, text='Open', fontSize=20, margin=5, radius=3,
+            button_Open = Button(screen, button_Undo.textRect.right+20, button_y1, 45, 20, text='Open', fontSize=20, font=font_button, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick=lambda: button_Button_click("open"))
-            button_Save = Button(screen, button_Open.textRect.right+10, button_y1, 45, 20, text='Save', fontSize=20, margin=5, radius=3,
+            button_Save = Button(screen, button_Open.textRect.right+10, button_y1, 45, 20, text='Save', fontSize=20, font=font_button, margin=5, radius=3,
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick=lambda: button_Button_click("save"))
 
