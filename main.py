@@ -9,6 +9,7 @@ import random
 import math
 import copy
 
+import webbrowser
 from tkinter import Tk
 from tkinter import filedialog as fd
 import os
@@ -21,7 +22,7 @@ SIZE_Y = SIZE_Y_START
 
 TG60 = math.sqrt(3)
 TG30 = TG60/3
-PANEL = 33*2
+PANEL = 35*2
 
 EDGE_PYRAMID = 60
 HEIGHT_PYRAMID = int(EDGE_PYRAMID*TG60/2)
@@ -280,6 +281,14 @@ def main():
         pygame.display.set_caption("Rolling Symmetry")  # Пишем в шапку
         screen.fill(BACKGROUND_COLOR) # Заливаем поверхность сплошным цветом
 
+        # инициализация окна с подсказкой
+        GAME = (WIN_WIDTH, WIN_HEIGHT)
+        game_scr = Surface(GAME)
+        HELP = (WIN_WIDTH//3, WIN_HEIGHT//3)
+
+        help = False
+        help_gen = True
+
         # инициализация кнопок
         if True:
             button_y1 = WIN_HEIGHT + 10 + 10
@@ -300,8 +309,17 @@ def main():
                             inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
                             onClick=lambda: button_Button_click("save"))
 
-            button_y3 = button_y1 + 30
-        button_set = [button_Reset, button_Scramble, button_Undo, button_Open, button_Save] # , button_MinusX, button_PlusX, button_MinusY, button_PlusY
+            button_About = Button(screen, button_Save.textRect.right+20, button_y1, 60, 20, text='About ->', fontSize=20, font=font_button, margin=5, radius=3,
+                            inactiveColour="#0000FF", hoverColour="#0000FF", pressedColour=(0, 200, 20),
+                            onClick=lambda: button_Button_click("about"))
+
+            button_y2 = button_y1 + 25
+            button_Help = Button(screen, 10, button_y2, 80, 20, text='Solved State', fontSize=20, font=font_button, margin=5, radius=3,
+                            inactiveColour="#008000", hoverColour="#008000", pressedColour=(0, 200, 20),
+                            onClick = lambda: button_Button_click("help"))
+            button_y2 += 4
+
+        button_set = [button_Reset, button_Scramble, button_Undo, button_Open, button_Save, button_About, button_Help]
 
         ################################################################################
         ################################################################################
@@ -318,11 +336,18 @@ def main():
 
                 events = pygame.event.get()
                 for ev in events:  # Обрабатываем события
-                    if (ev.type == QUIT) or (ev.type == KEYDOWN and ev.key == K_ESCAPE):
+                    if (ev.type == QUIT):
                         return SystemExit, "QUIT"
+                    if (ev.type == KEYDOWN and ev.key == K_ESCAPE):
+                        help = False if help else help
+                    if (ev.type == KEYDOWN and ev.key == K_F1):
+                        BTN_CLICK = True
+                        BTN_CLICK_STR = "help"
                     if ev.type == MOUSEBUTTONDOWN and ev.button == 1:
-                        mouse_x = ev.pos[0]
-                        mouse_y = ev.pos[1]
+                        if not help:
+                            mouse_x = ev.pos[0]
+                            mouse_y = ev.pos[1]
+                        help = False if help else help
                     if ev.type == MOUSEBUTTONDOWN and ev.button == 5:
                         BTN_CLICK = True
                         BTN_CLICK_STR = "undo"
@@ -331,7 +356,7 @@ def main():
                 # обработка нажатия на кнопки
                 if BTN_CLICK:
                     fl_break = True
-                    if BTN_CLICK_STR=="reset":
+                    if BTN_CLICK_STR=="reset" and not help:
                         if not file_ext:
                             fl_break = True
                             SIZE_X, SIZE_Y = SIZE_X_START, SIZE_Y_START
@@ -342,7 +367,7 @@ def main():
                                 fl_break = True
                                 level, SIZE_Y, SIZE_X = fil
                                 file_ext = True
-                    if BTN_CLICK_STR=="scramble":
+                    if BTN_CLICK_STR=="scramble" and not help:
                         fl_break = False
                         scramble_move = SIZE_X * SIZE_Y * 200
                         pos_pred = (0, 0)
@@ -364,6 +389,15 @@ def main():
                     if BTN_CLICK_STR=="save":
                         fl_break = False
                         save_file(level)
+
+                    if BTN_CLICK_STR=="about":
+                        fl_break = False
+                        webbrowser.open("https://github.com/grigorusha/RollingSymmetry", new=2, autoraise=True)
+                        webbrowser.open("https://twistypuzzles.com/forum/viewtopic.php?t=38581", new=2, autoraise=True)
+                        webbrowser.open("https://twistypuzzles.com/forum/viewtopic.php?p=421131#p421131", new=2, autoraise=True)
+                    if BTN_CLICK_STR=="help":
+                        fl_break = False
+                        help = not help
 
                     BTN_CLICK = False
                     BTN_CLICK_STR = ""
@@ -393,7 +427,7 @@ def main():
             ################################################################################
             # обработка нажатия на пирамидки в игровом поле
 
-            if mouse_x+mouse_y > 0:
+            if mouse_x+mouse_y > 0 and not help:
                 fl_stop = False
                 for ny, row in enumerate(level):
                     for nx,pyramid in enumerate(row):
@@ -488,17 +522,18 @@ def main():
             # screen.blit(texty, texty_place)
 
             text_moves = font.render('Moves: ' + str(moves), True, PYRAMID_COLOR[2][1])
-            text_moves_place = text_moves.get_rect(topleft=(10, button_y3-7))
+            text_moves_place = text_moves.get_rect(topleft=(button_Help.textRect.right+20, button_y2-7))
             screen.blit(text_moves, text_moves_place)
             if solved:
                 text_solved = font.render('Solved', True, PYRAMID_COLOR[0][1])
             else:
                 text_solved = font.render('not solved', True, RED_COLOR)
-            text_solved_place = text_solved.get_rect(topleft=(text_moves_place.right + 10, button_y3-7))
+            text_solved_place = text_solved.get_rect(topleft=(text_moves_place.right + 10, button_y2-7))
             screen.blit(text_solved, text_solved_place)
 
             ############################################
             # отрисовка сетки и пирамидок
+            game_scr.fill(Color(GRAY_COLOR))
             for fl_empty in range(4):
                 for ny, row in enumerate(level):
                     for nx,pyramid in enumerate(row):
@@ -518,51 +553,60 @@ def main():
                             if orient:  # уголок вверх
                                 cell = ret_cell(level, ny, nx-1)
                                 if cell==-1 or cell==9:
-                                    draw.line(screen, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid+BORDERka], [x3_grid+BORDERe//2, yy_grid-BORDERka], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid+BORDERka], [x3_grid+BORDERe//2, yy_grid-BORDERka], 2)
                                 cell = ret_cell(level, ny, nx+1)
                                 if cell == -1 or cell == 9:
-                                    draw.line(screen, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid+BORDERka], [x2_grid-BORDERe//2, yy_grid-BORDERka], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid+BORDERka], [x2_grid-BORDERe//2, yy_grid-BORDERka], 2)
                                 cell = ret_cell(level, ny + 1, nx)
                                 if cell == -1 or cell == 9:
-                                    draw.line(screen, GRAY_COLOR2, [x2_grid-BORDERe, yy_grid],[x3_grid+BORDERe, yy_grid], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x2_grid-BORDERe, yy_grid],[x3_grid+BORDERe, yy_grid], 2)
                             else:  # уголок вниз
                                 cell = ret_cell(level, ny, nx-1)
                                 if cell==-1 or cell==9:
-                                    draw.line(screen, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid-BORDERka], [x2_grid+BORDERe//2, yy_grid+BORDERka], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x1_grid-BORDERe//2, y1_grid-BORDERka], [x2_grid+BORDERe//2, yy_grid+BORDERka], 2)
                                 cell = ret_cell(level, ny, nx+1)
                                 if cell == -1 or cell == 9:
-                                    draw.line(screen, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid-BORDERka], [x3_grid-BORDERe//2, yy_grid+BORDERka], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x1_grid+BORDERe//2, y1_grid-BORDERka], [x3_grid-BORDERe//2, yy_grid+BORDERka], 2)
                                 cell = ret_cell(level, ny-1, nx)
                                 if cell==-1 or cell==9:
-                                    draw.line(screen, GRAY_COLOR2, [x2_grid+BORDERe, yy_grid],[x3_grid-BORDERe, yy_grid], 2)
+                                    draw.line(game_scr, GRAY_COLOR2, [x2_grid+BORDERe, yy_grid],[x3_grid-BORDERe, yy_grid], 2)
 
                         # отрисовка точек
                         # if fl_empty == 0 and pyramid == 9:
-                        #     draw.circle(screen, GRAY_COLOR2, (x1, y1), 3)
-                        #     draw.circle(screen, GRAY_COLOR2, (x2, yy), 3)
-                        #     draw.circle(screen, GRAY_COLOR2, (x3, yy), 3)
+                        #     draw.circle(game_scr, GRAY_COLOR2, (x1, y1), 3)
+                        #     draw.circle(game_scr, GRAY_COLOR2, (x2, yy), 3)
+                        #     draw.circle(game_scr, GRAY_COLOR2, (x3, yy), 3)
 
                         # отрисовка пирамидок и лунок
                         if fl_empty == 1 and pyramid == 0:
                             RAD = int(RADIUS / 1.4)
                             scol, ecol = (160, 160, 160, 255), (120, 120, 120, 255)
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x1-RAD, y1-RAD))
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x2-RAD, yy-RAD))
-                            screen.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x3-RAD, yy-RAD))
+                            game_scr.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x1-RAD, y1-RAD))
+                            game_scr.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x2-RAD, yy-RAD))
+                            game_scr.blit(gradient_circle(RAD, scol, ecol, False, -1, offset=offset), (x3-RAD, yy-RAD))
 
                         if fl_empty == 2 and pyramid > 0 and pyramid < 9:  # пирамидка
                             scol,ecol = GRADIENT_COLOR[pyramid-1]
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y1-RADIUS))
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x2-RADIUS, yy-RADIUS))
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x3-RADIUS, yy-RADIUS))
-                            screen.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y0-RADIUS))
+                            game_scr.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y1-RADIUS))
+                            game_scr.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x2-RADIUS, yy-RADIUS))
+                            game_scr.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x3-RADIUS, yy-RADIUS))
+                            game_scr.blit(gradient_circle(RADIUS, scol, ecol, True, 1, offset=offset), (x1-RADIUS, y0-RADIUS))
 
                         # if fl_empty == 3 and pyramid > 0 and pyramid < 9:  # сетка для отладки
                         #     x1_grid,y1_grid,x2_grid,x3_grid,yy_grid = coordinate_calc(ny, nx, BORDERka)
-                        #     draw.line(screen, GRAY_COLOR2, [x1_grid, y1_grid], [x2_grid, yy_grid], 2)
-                        #     draw.line(screen, GRAY_COLOR2, [x1_grid, y1_grid], [x3_grid, yy_grid], 2)
-                        #     draw.line(screen, GRAY_COLOR2, [x2_grid, yy_grid], [x3_grid, yy_grid], 2)
+                        #     draw.line(game_scr, GRAY_COLOR2, [x1_grid, y1_grid], [x2_grid, yy_grid], 2)
+                        #     draw.line(game_scr, GRAY_COLOR2, [x1_grid, y1_grid], [x3_grid, yy_grid], 2)
+                        #     draw.line(game_scr, GRAY_COLOR2, [x2_grid, yy_grid], [x3_grid, yy_grid], 2)
 
+            screen.blit(game_scr, (0, 0))
+
+            # окно помощи
+            if help_gen:
+                help_gen = False
+                help_screen = pygame.transform.scale(game_scr, HELP)
+            if help:
+                screen.blit(help_screen, (GAME[0]-HELP[0]-BORDER//3,BORDER//3))
+                draw.rect(screen, Color("#B88800"), (GAME[0]-HELP[0]-2*(BORDER//3), 0, HELP[0]+2*(BORDER//3), HELP[1]+2*(BORDER//3)), BORDER // 3)
 
             #####################################################################################
             pygame_widgets.update(events)
